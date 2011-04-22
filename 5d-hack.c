@@ -30,6 +30,7 @@
 #include "bmp.h"
 #include "menu.h"
 #include "version.h"
+#include "property.h"
 
 /** If CONFIG_EARLY_PORT is defined, only a few things will be enabled */
 #undef CONFIG_EARLY_PORT
@@ -225,8 +226,6 @@ my_dump_task( void )
 
 struct config * global_config;
 
-static volatile int init_funcs_done;
-
 static void
 call_init_funcs( void * priv )
 {
@@ -246,8 +245,6 @@ call_init_funcs( void * priv )
 		thunk entry = (thunk) init_func->entry;
 		entry();
 	}
-
-	init_funcs_done = 1;
 }
 
 #endif // !CONFIG_EARLY_PORT
@@ -262,6 +259,67 @@ int magic_is_off()
 {
 	return magic_off; 
 }
+
+
+#ifndef CONFIG_EARLY_PORT
+
+static void *
+prop_startup_handler(
+	unsigned property,
+	void * token,
+	void * arg,
+	unsigned len
+)
+{
+	uint32_t * const buf = arg;
+
+	if (buf[0] != 0xFF) // shutdown maybe?
+	{
+		return prop_cleanup( token, property );
+	}
+
+	bmp_printf( FONT(FONT_LARGE, COLOR_WHITE, COLOR_BLACK), 100, 100,
+		"Magic Lantern for 550D \n"
+		"Loading, please wait...\n"
+	);
+
+	menu_init();
+	debug_init();
+	display_clock();
+
+	// Parse our config file
+	config_parse_file( "B:/magic.cfg" );
+
+
+	// INIT_FUNC's
+	call_init_funcs( 0 );
+
+	// Create all of our auto-create tasks
+	extern struct task_create _tasks_start[];
+	extern struct task_create _tasks_end[];
+	struct task_create * task = _tasks_start;
+
+	for( ; task < _tasks_end ; task++ )
+	{
+		task_create(
+			task->name,
+			task->priority,
+			task->flags,
+			task->entry,
+			task->arg
+		);
+	}
+
+	return prop_cleanup( token, property );
+}
+
+static struct prop_handler prop_startup = {
+	.handler	= prop_startup_handler,
+	.property	= PROP_TERMINATE_SHUT_REQ,
+};
+
+#endif // !CONFIG_EARLY_PORT
+
 
 /** Initial task setup.
  *
@@ -312,7 +370,7 @@ my_init_task(void)
 
 #ifndef CONFIG_EARLY_PORT
 
-	msleep( 1500 );
+	msleep( 1000 );
 
 	magic_off = FOCUS_CONFIRMATION_AF_PRESSED ? 1 : 0;
 	if (magic_off)
@@ -328,60 +386,11 @@ my_init_task(void)
 		additional_version[7] = '\0';
 		return;
 	}
+	
+	msleep(5000);
+	bmp_printf(FONT_LARGE, 0, 0, "acu-i acu");
+	msleep(1000);
 
-	menu_init();
-	debug_init();
-	display_clock();
-
-	msleep( 1000 );
-	display_clock();
-
-/*	bmp_printf( FONT_MED, 0, 40,
-		"Magic Lantern v.%s (%s)\n"
-		"Built on %s by %s\n",
-		build_version,
-		build_id,
-		build_date,
-		build_user
-	);*/
-
-	//~ return;
-	init_funcs_done = 0;
-	call_init_funcs( 0 );
-
-	msleep( 1000 );
-	display_clock();
-
-	// Create all of our auto-create tasks
-	extern struct task_create _tasks_start[];
-	extern struct task_create _tasks_end[];
-	struct task_create * task = _tasks_start;
-
-	int ml_tasks = 0;
-	for( ; task < _tasks_end ; task++ )
-	{
-		//~ DebugMsg( DM_MAGIC, 3,
-			//~ "Creating task %s(%d) pri=%02x flags=%08x",
-			//~ task->name,
-			//~ task->arg,
-			//~ task->priority,
-			//~ task->flags
-		//~ );
-
-		task_create(
-			task->name,
-			task->priority,
-			task->flags,
-			task->entry,
-			task->arg
-		);
-		ml_tasks++;
-	}
-	//~ bmp_printf( FONT_MED, 0, 85,
-		//~ "Magic Lantern is up and running... %d tasks started.",
-		//~ ml_tasks
-	//~ );
-
-	//~ DebugMsg( DM_MAGIC, 3, "magic lantern init done" );
+	prop_handler_init( &prop_startup );
 #endif // !CONFIG_EARLY_PORT
 }
