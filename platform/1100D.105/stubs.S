@@ -39,6 +39,8 @@ NSTUB(0xFF530984,  bzero32)                                 // might be good (du
 NSTUB(0xFF017F80,  create_init_task)                        // might be good (dumps=1, score=3.1)
 NSTUB(0xFF0197D8,  init_task)                               // might be good (dumps=1, score=10)
 NSTUB(    0x833C,  additional_version)
+// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
+// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** File I/O **/
 NSTUB(0xFF1D9620,  FIO_CloseFile)                           // might be good (dumps=1, score=1e+02)
@@ -205,8 +207,6 @@ NSTUB(0xFF1B9248,  mvrSetGopOptSizeFULLHD)                  // might be good (du
 /** Interrupts **/
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
-// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
-// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** LCD Sensor **/
 // NSTUB(    ???,  DispSensorStart)                         /* present on 500D.111, 50D.109, 5D2.212, 600D.102, 650D.104, 550D.109, 700D.113 */

@@ -42,6 +42,8 @@ NSTUB(0xFFA792FC - RAM_OFFSET,  bzero32)
 NSTUB(0xFFA5FD58 - RAM_OFFSET,  create_init_task)
 NSTUB(0xFF0C540C,  init_task)
 NSTUB(   0x26CE8,  additional_version)
+// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
+// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** File I/O **/
 NSTUB(0xFF345378,  FIO_CloseFile)
@@ -75,7 +77,7 @@ NSTUB(0xFF1C7190,  gui_massive_event_loop)
 /** ASIF **/
 NSTUB(0xFF134430,  PowerAudioOutput)
 NSTUB(0xFF134024,  PowerMicAmp)
-NSTUB(0xFF109540,  SetASIFMode)
+///NSTUB(0xFF109540,  SetASIFMode)
 NSTUB(0xFF10C618,  SetAudioVolumeIn)                        /* present on 6D.113 */
 NSTUB(0xFF132598,  SetAudioVolumeOut)                       // keep volume
 NSTUB(0xFF109720,  SetNextASIFADCBuffer)
@@ -209,8 +211,6 @@ NSTUB(0xFF2C16B0,  mvrSetDefQScale)
 /** Interrupts **/
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
-// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
-// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** LCD Sensor **/
 NSTUB(0xFF145F58,  DispSensorStart)

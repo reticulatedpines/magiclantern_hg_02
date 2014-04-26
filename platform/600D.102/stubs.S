@@ -57,6 +57,8 @@ NSTUB(0xFF5683E8,  bzero32)                                 // called by cstart(
 NSTUB(0xFF017FA4,  create_init_task)
 NSTUB(0xFF0197FC,  init_task)                               // passed as arg to create_init_task, look for dmSetup
 NSTUB(    0x82E0,  additional_version)
+// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
+// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** File I/O **/
 NSTUB(0xFF1E66B4,  FIO_CloseFile)
@@ -223,8 +225,6 @@ NSTUB(0xFF1C9778,  mvrSetGopOptSizeFULLHD)
 /** Interrupts **/
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
-// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
-// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** LCD Sensor **/
 NSTUB(0xFF08397C,  DispSensorStart)

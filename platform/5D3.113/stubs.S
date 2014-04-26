@@ -38,6 +38,8 @@ NSTUB(0xFF0C1C0C,  cstart)
 NSTUB(0xFF9FB390 - RAM_OFFSET,  bzero32)
 NSTUB(0xFF9E1E00 - RAM_OFFSET,  create_init_task)
 NSTUB(0xFF0C520C,  init_task)
+NSTUB(0xFFA02C54 - RAM_OFFSET,  post_isr_hook)
+NSTUB(0xFFA02C50 - RAM_OFFSET,  pre_isr_hook)
 NSTUB(   0x468B8,  additional_version)
 
 /** File I/O **/
@@ -203,8 +205,6 @@ NSTUB(0xFF4A4730,  CancelDateTimer)                         // Look for "CancelD
 // NSTUB(    ???,  mvr_config)                              /* present on 7D.203, 500D.111, 60D.111, 6D.113, 50D.109, 5D2.212, 600D.102, 650D.104, 550D.109, 1100D.105, EOSM.202, 700D.113 */
 
 /** Interrupts **/
-NSTUB(0xFFA02C54 - RAM_OFFSET,  post_isr_hook)
-NSTUB(0xFFA02C50 - RAM_OFFSET,  pre_isr_hook)
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
 

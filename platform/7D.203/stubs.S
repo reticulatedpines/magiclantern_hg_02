@@ -36,6 +36,8 @@
 /** Startup **/
 NSTUB( ROMBASEADDR, firmware_entry )
 NSTUB(0xFF010FB0,  cstart)
+NSTUB(    0x1940,  post_isr_hook)
+NSTUB(    0x193C,  pre_isr_hook)
 NSTUB(0xFF50CDEC,  bzero32)
 NSTUB(0xFF01559C,  create_init_task)
 NSTUB(0xFF018734,  init_task)
@@ -203,8 +205,6 @@ NSTUB(0xFF1E0918,  mvrSetFullHDOptSize)
 NSTUB(0xFF1E0B08,  mvrSetGopOptSizeFULLHD)
 
 /** Interrupts **/
-NSTUB(    0x1940,  post_isr_hook)
-NSTUB(    0x193C,  pre_isr_hook)
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
 

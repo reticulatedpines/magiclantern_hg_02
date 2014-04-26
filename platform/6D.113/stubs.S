@@ -44,6 +44,8 @@ NSTUB(0xFF0C1BA8,  cstart)
 NSTUB(0xFFD2F2F8 - RAM_OFFSET,  bzero32)
 NSTUB(0xFFCC664C - RAM_OFFSET,  create_init_task)
 NSTUB(0xFF0C5438,  init_task)
+NSTUB(0xFFD37FB8 - RAM_OFFSET,  post_isr_hook)
+NSTUB(0xFFD37FB4 - RAM_OFFSET,  pre_isr_hook)
 // NSTUB(    ???,  additional_version)                      /* present on 7D.203, 500D.111, 60D.111, 5D3.113, 50D.109, 5D2.212, 600D.102, 550D.109, 1100D.105, 700D.113 */
 
 /** File I/O **/
@@ -208,8 +210,6 @@ NSTUB(   0x7AE8C,  mvr_config)
 // NSTUB(    ???,  mvrSetGopOptSizeFULLHD)                  /* present on 600D.102, 550D.109, 1100D.105 */
 
 /** Interrupts **/
-NSTUB(0xFFD37FB8 - RAM_OFFSET,  post_isr_hook)
-NSTUB(0xFFD37FB4 - RAM_OFFSET,  pre_isr_hook)
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
 

@@ -39,6 +39,8 @@ NSTUB(0xFFC458FC,  bzero32)                                 // delta = 40
 NSTUB(0xFF817470,  create_init_task)
 NSTUB(0xFF811DBC,  init_task)
 NSTUB(   0x13428,  additional_version)
+// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
+// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** File I/O **/
 NSTUB(0xFF9AAD10,  FIO_CloseFile)
@@ -205,8 +207,6 @@ NSTUB(0xFF990188,  mvrSetDefQScale)
 /** Interrupts **/
 // NSTUB(    ???,  isr_table_handler)                       /* present on 7D_MASTER.203 */
 // NSTUB(    ???,  isr_table_param)                         /* present on 7D_MASTER.203 */
-// NSTUB(    ???,  post_isr_hook)                           /* present on 7D.203, 6D.113, 5D3.113, EOSM.202 */
-// NSTUB(    ???,  pre_isr_hook)                            /* present on 7D.203, 6D.113, 5D3.113, 7D_MASTER.203, EOSM.202 */
 
 /** LCD Sensor **/
 NSTUB(0xFF9D8250,  DispSensorStart)
