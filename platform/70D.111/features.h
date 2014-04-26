@@ -10,7 +10,7 @@
 #undef FEATURE_AUDIO_METERS //works, but cam is unstable as of now
 
 // Audio features that work
-#define FEATURE_AUDIO_REMOTE_SHOT
+#undef FEATURE_AUDIO_REMOTE_SHOT
 
 // Not working :(
 #undef FEATURE_IMAGE_EFFECTS
