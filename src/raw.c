@@ -294,6 +294,14 @@ void raw_buffer_intercept_from_stateobj()
      -593, 10000,     1772, 10000,    6198, 10000
 #endif
 
+#ifdef CONFIG_70D
+    //~ { "Canon EOS 70D", 0, 0x3bc7,
+    //~ { 7034,-804,-1014,-4420,12564,2058,-851,1994,5758 } },
+    #define CAM_COLORMATRIX1                     \
+     7034, 10000,     -804, 10000,   -1014, 10000,\
+    -4420, 10000,    12564, 10000,    2058, 10000, \
+     -851, 10000,     1994, 10000,    5758, 10000
+#endif
 struct raw_info raw_info = {
     .api_version = 1,
     .bits_per_pixel = 14,
@@ -365,6 +373,10 @@ static int dynamic_ranges[] = {1060, 1063, 1037, 982, 901, 831, 718, 622, 536};
 
 #ifdef CONFIG_7D
 static int dynamic_ranges[] = {1112, 1108, 1076, 1010, 902, 826, 709, 622};
+#endif
+
+#ifdef CONFIG_70D
+static int dynamic_ranges[] = {1091, 1070, 1046, 986, 915, 837, 746, 655, 555};
 #endif
 
 static int autodetect_black_level(int* black_mean, int* black_stdev);
