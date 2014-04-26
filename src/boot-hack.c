@@ -46,6 +46,10 @@
 #include "gps.h"
 #endif
 
+#if defined(CONFIG_HELLO_WORLD)
+#include "fw-signature.h"
+#endif
+
 /** These are called when new tasks are created */
 static void my_task_dispatch_hook( struct context ** );
 static int my_init_task(int a, int b, int c, int d);
@@ -203,6 +207,10 @@ copy_and_restart( )
 }
 
 
+static int _hold_your_horses = 1; // 0 after config is read
+int ml_started = 0; // 1 after ML is fully loaded
+int ml_gui_initialized = 0; // 1 after gui_main_task is started 
+
 #ifndef CONFIG_EARLY_PORT
 
 /** This task does nothing */
@@ -213,9 +221,6 @@ null_task( void )
     return;
 }
 
-static int _hold_your_horses = 1; // 0 after config is read
-int ml_started = 0; // 1 after ML is fully loaded
-int ml_gui_initialized = 0; // 1 after gui_main_task is started 
 
 /**
  * Called by DryOS when it is dispatching (or creating?)
@@ -397,8 +402,7 @@ static void my_big_init_task()
 #endif
 
 #ifdef CONFIG_HELLO_WORLD
-    #include "fw-signature.h"
-    int sig = compute_signature(SIG_START, 0x10000);
+    int sig = compute_signature((int*)SIG_START, 0x10000);
     while(1)
     {
         bmp_printf(FONT_LARGE, 50, 50, "Hello, World!");
@@ -440,7 +444,9 @@ static void my_big_init_task()
     _ml_cbr_init();
     menu_init();
     debug_init();
+    #ifndef CONFIG_EARLY_PORT
     call_init_funcs();
+    #endif // !CONFIG_EARLY_PORT
     msleep(200); // leave some time for property handlers to run
 
     #ifdef CONFIG_BATTERY_TEST
@@ -474,9 +480,8 @@ static void my_big_init_task()
 
     #ifdef FEATURE_GPS_TWEAKS
     gps_tweaks_startup_hook();
-    #endif
-
     _hold_your_horses = 0; // config read, other overriden tasks may start doing their job
+    #endif
 
     // Create all of our auto-create tasks
     extern struct task_create _tasks_start[];
@@ -554,7 +559,9 @@ static void my_big_init_task()
     //~ );
     
     msleep(500);
+    #ifndef CONFIG_EARLY_PORT
     ml_started = 1;
+    #endif
 
     //~ stress_test_menu_dlg_api_task(0);
 }
