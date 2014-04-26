@@ -2,6 +2,12 @@
  * Camera internals for 700D 1.1.3
  */
 
+/** 
+ * EARLY PORT
+ **/
+#define CONFIG_EARLY_PORT
+#define CONFIG_HELLO_WORLD
+
 /** Properties are persistent (saved in NVRAM) => a mistake can cause permanent damage. Undefine this for new ports. */
 #undef CONFIG_PROP_REQUEST_CHANGE
 
