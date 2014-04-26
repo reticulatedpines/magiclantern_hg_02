@@ -77,7 +77,6 @@ NSTUB(0xFF1C7190,  gui_massive_event_loop)
 /** ASIF **/
 NSTUB(0xFF134430,  PowerAudioOutput)
 NSTUB(0xFF134024,  PowerMicAmp)
-///NSTUB(0xFF109540,  SetASIFMode)
 NSTUB(0xFF10C618,  SetAudioVolumeIn)                        /* present on 6D.113 */
 NSTUB(0xFF132598,  SetAudioVolumeOut)                       // keep volume
 NSTUB(0xFF109720,  SetNextASIFADCBuffer)
@@ -313,6 +312,7 @@ NSTUB(0xFFA71D84 - RAM_OFFSET,  vsnprintf)
 ///NSTUB(0xFF5F36BC,  PackMem_StartEDmac)
 ///NSTUB(0xFFA6E7CC - RAM_OFFSET,  PopEDmac)
 ///NSTUB(0xFF4D75D4,  RedrawDisplay)
+///NSTUB(0xFF109540,  SetASIFMode)
 ///NSTUB(0xFF129384,  SetBitmapVramAddress)
 ///NSTUB(0xFF10B99C,  SoundDevActiveOut)
 ///NSTUB(0xFF1387A8,  bootdisk_disable)
