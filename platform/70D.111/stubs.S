@@ -193,9 +193,9 @@ NSTUB(0xFF1480A0,  FreeMemoryResource)                      // m_pfFreeMemoryCBR
 // NSTUB(    ??? ,  gui_timer_struct)                        /* present on 1100D.105 , 7D.203 , 500D.111 , 5D2.212 , 50D.109 , 550D.109 , 60D.111 , 600D.102 */
 
 /** GUI timers **/
-// NSTUB(    ???,  CancelDateTimer)                         /* present on 6D.113, 7D.203, 5D3.113 */
-// NSTUB(    ???,  SetTimerAfter)                           /* present on 650D.104 */
-// NSTUB(    ???,  TimerCancel)                             /* present on 650D.104 */
+NSTUB(0xFF54A2D0,  CancelDateTimer)
+NSTUB(    0xE8AC,  SetTimerAfter)
+NSTUB(    0xEAAC, TimerCancel)
 
 /** H264 Encoder **/
 NSTUB(   0x946E0,  mvr_config)
