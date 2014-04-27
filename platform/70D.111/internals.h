@@ -5,8 +5,6 @@
 /** 
  * EARLY PORT
  **/
-#define CONFIG_EARLY_PORT
-#define CONFIG_HELLO_WORLD
 
 /** Properties are persistent (saved in NVRAM) => a mistake can cause permanent damage. Undefine this for new ports. */
 #undef CONFIG_PROP_REQUEST_CHANGE

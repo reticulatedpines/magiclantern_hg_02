@@ -1,5 +1,5 @@
 /*
- *  700D 1.1.3 consts
+ *  70D 1.1.1 consts
  */
 
 #define CARD_LED_ADDRESS 0xC022C188 // like 5dm3 and EOS-M
@@ -10,32 +10,29 @@
 #define FORMAT_BTN "[Q]"
 #define STR_LOC 11
 
-    // RESTARTSTART 0x7EC00
+    // FIXME: RESTARTSTART 0x7EC00
 #define HIJACK_INSTR_BL_CSTART  0xFF0C0D90
-#define HIJACK_INSTR_BSS_END 0xFF0C1CCC //BSS_END is 0x7EB68
-#define HIJACK_FIXBR_BZERO32 0xFF0C1C30
-#define HIJACK_FIXBR_CREATE_ITASK 0xFF0C1CBC
-#define HIJACK_INSTR_MY_ITASK 0xFF0C1CD8
-#define HIJACK_TASK_ADDR 0x233DC
+#define HIJACK_INSTR_BSS_END 0xFF0C1C64 //BSS_END is 0xFAE50
+#define HIJACK_FIXBR_BZERO32 0xFF0C1BB8
+#define HIJACK_FIXBR_CREATE_ITASK 0xFF0C1C54
+#define HIJACK_INSTR_MY_ITASK 0xFF0C1C6C
+#define HIJACK_TASK_ADDR 0x7AAC4
 
-/*
- * Most of the stuff that follows is taken directly from the EOSM or 5D3
- */
 // no idea if it's overflowing, need to check experimentally 
-#define ARMLIB_OVERFLOWING_BUFFER 0x4AD20 // in AJ_armlib_setup_related3
+#define ARMLIB_OVERFLOWING_BUFFER 0xAEF18 // in AJ_armlib_setup_related3
 
-#define DRYOS_ASSERT_HANDLER 0x233BC // dec TH_assert or assert_0
+#define DRYOS_ASSERT_HANDLER 0x7AAA0 // dec TH_assert or assert_0
 
-#define YUV422_LV_BUFFER_1 0x4bde7800
-#define YUV422_LV_BUFFER_2 0x4b9d7800
-#define YUV422_LV_BUFFER_3 0x4c1f7800
+    #define YUV422_LV_BUFFER_1 0x4bde7800
+    #define YUV422_LV_BUFFER_2 0x4b9d7800
+    #define YUV422_LV_BUFFER_3 0x4c1f7800
 
-#define REG_EDMAC_WRITE_LV_ADDR 0xc0f04208 // SDRAM address of LV buffer (aka VRAM)
-#define REG_EDMAC_WRITE_HD_ADDR 0xc0f04108 // SDRAM address of HD buffer (aka YUV)
+    #define REG_EDMAC_WRITE_LV_ADDR 0xc0f04208 // SDRAM address of LV buffer (aka VRAM)
+    #define REG_EDMAC_WRITE_HD_ADDR 0xc0f04108 // SDRAM address of HD buffer (aka YUV)
 
-// http://magiclantern.wikia.com/wiki/VRAM_ADDR_from_code
-// stateobj_disp[1]
-#define YUV422_LV_BUFFER_DISPLAY_ADDR (*(uint32_t*)(0x23C20+0x11c))
+    // http://magiclantern.wikia.com/wiki/VRAM_ADDR_from_code
+    // stateobj_disp[1]
+    #define YUV422_LV_BUFFER_DISPLAY_ADDR (*(uint32_t*)(0x23C20+0x11c))
 
 
 #define YUV422_HD_BUFFER_DMA_ADDR (shamem_read(REG_EDMAC_WRITE_HD_ADDR)) // first line from DMA is dummy
@@ -44,32 +41,30 @@
         // http://magiclantern.wikia.com/wiki/ASM_Zedbra
     #define YUV422_HD_BUFFER_1 0x463cc080
     #define YUV422_HD_BUFFER_2 0x46000080
-#define IS_HD_BUFFER(x)  (1) // quick check if x looks like a valid HD buffer
+    #define IS_HD_BUFFER(x)  (1) // quick check if x looks like a valid HD buffer
 
-// see "focusinfo" and Wiki:Struct_Guessing
-#define FOCUS_CONFIRMATION (*(int*)0x27660)
+    // see "focusinfo" and Wiki:Struct_Guessing
+    #define FOCUS_CONFIRMATION (*(int*)0x27660)
 
 //~ look for string "[MC] permit LV instant", it's the struct refrenced in this function.
-#define HALFSHUTTER_PRESSED (*(int*)0x24884)
-
-#define DISPLAY_SENSOR_POWERED (*(int*)(0x2486C+0x14))
+#define HALFSHUTTER_PRESSED (*(int*)0x7BFB8)
 
 // for gui_main_task
 #define GMT_NFUNCS 7
-#define GMT_FUNCTABLE 0xFF7FA714 //dec gui_main_task
+#define GMT_FUNCTABLE 0xFFA16DB0 //dec gui_main_task
 
     #define SENSOR_RES_X 5184
     #define SENSOR_RES_Y 3456
-#define CURRENT_DIALOG_MAYBE (*(int*)0x2658C) // in SetGUIRequestMode
+#define CURRENT_DIALOG_MAYBE (*(int*)0x909E4) // in SetGUIRequestMode
 #define LV_BOTTOM_BAR_DISPLAYED UNAVI_FEEDBACK_TIMER_ACTIVE
-#define ISO_ADJUSTMENT_ACTIVE ((*(int*)(0x31254)) == 0xF) // dec ptpNotifyOlcInfoChanged and look for: if arg1 == 1: MEM(0x79B8) = *(arg2)
+    #define ISO_ADJUSTMENT_ACTIVE ((*(int*)(0x31254)) == 0xF) // dec ptpNotifyOlcInfoChanged and look for: if arg1 == 1: MEM(0x79B8) = *(arg2)
 
     // from a screenshot
     #define COLOR_FG_NONLV 1
 
-#define MVR_516_STRUCT (*(void**)0x23734) // look in MVR_Initialize for AllocateMemory call; decompile it and see where ret_AllocateMemory is stored.
+    #define MVR_516_STRUCT (*(void**)0x23734) // look in MVR_Initialize for AllocateMemory call; decompile it and see where ret_AllocateMemory is stored.
 
-#define div_maybe(a,b) ((a)/(b))
+    #define div_maybe(a,b) ((a)/(b))
 
     // see mvrGetBufferUsage, which is not really safe to call => err70
     // macros copied from arm-console
@@ -169,26 +164,26 @@
     #define FASTEST_SHUTTER_SPEED_RAW 152
     #define MAX_AE_EV 5
 
-#define DIALOG_MnCardFormatBegin (0x44EC0) // ret_CreateDialogBox(...DlgMnCardFormatBegin_handler...) is stored there
-#define DIALOG_MnCardFormatExecute (0x49190) // similar
+    #define DIALOG_MnCardFormatBegin (0x44EC0) // ret_CreateDialogBox(...DlgMnCardFormatBegin_handler...) is stored there
+    #define DIALOG_MnCardFormatExecute (0x49190) // similar
 
     #define BULB_MIN_EXPOSURE 1000
 
-// http://magiclantern.wikia.com/wiki/Fonts
-#define BFNT_CHAR_CODES    0xFFCF67E4
-#define BFNT_BITMAP_OFFSET 0xFFCF972C
-#define BFNT_BITMAP_DATA   0xFFCFC674
+    // http://magiclantern.wikia.com/wiki/Fonts
+    #define BFNT_CHAR_CODES    0xFFCF67E4
+    #define BFNT_BITMAP_OFFSET 0xFFCF972C
+    #define BFNT_BITMAP_DATA   0xFFCFC674
 
-#define DLG_SIGNATURE 0x414944 
+    #define DLG_SIGNATURE 0x414944 
 
     // from CFn
     #define AF_BTN_HALFSHUTTER 0
     #define AF_BTN_STAR 3
 
-#define IMGPLAY_ZOOM_LEVEL_ADDR (0x369A4) // dec GuiImageZoomDown and look for a negative counter
-#define IMGPLAY_ZOOM_LEVEL_MAX 14
-#define IMGPLAY_ZOOM_POS_X MEM(0x6EE38) // CentrePos
-#define IMGPLAY_ZOOM_POS_Y MEM(0x6EE38+0x4)
+    #define IMGPLAY_ZOOM_LEVEL_ADDR (0x369A4) // dec GuiImageZoomDown and look for a negative counter
+    #define IMGPLAY_ZOOM_LEVEL_MAX 14
+    #define IMGPLAY_ZOOM_POS_X MEM(0x6EE38) // CentrePos
+    #define IMGPLAY_ZOOM_POS_Y MEM(0x6EE38+0x4)
     #define IMGPLAY_ZOOM_POS_X_CENTER 0x144
     #define IMGPLAY_ZOOM_POS_Y_CENTER 0xd8
     #define IMGPLAY_ZOOM_POS_DELTA_X (0x144 - 0x93)
@@ -197,50 +192,50 @@
 
     #define BULB_EXPOSURE_CORRECTION 150 // min value for which bulb exif is OK [not tested]
 
-// see http://magiclantern.wikia.com/wiki/VRAM/BMP
-#define WINSYS_BMP_DIRTY_BIT_NEG MEM(0x3DA14+0x2C)
+    // see http://magiclantern.wikia.com/wiki/VRAM/BMP
+    #define WINSYS_BMP_DIRTY_BIT_NEG MEM(0x3DA14+0x2C)
 
-// manual exposure overrides
-#define LVAE_STRUCT 0x78474
-#define CONTROL_BV      (*(uint16_t*)(LVAE_STRUCT+0x20)) // EP_SetControlBv
-#define CONTROL_BV_TV   (*(uint16_t*)(LVAE_STRUCT+0x22)) // EP_SetControlParam
-#define CONTROL_BV_AV   (*(uint16_t*)(LVAE_STRUCT+0x24))
-#define CONTROL_BV_ISO  (*(uint16_t*)(LVAE_STRUCT+0x26))
-#define CONTROL_BV_ZERO (*(uint16_t*)(LVAE_STRUCT+0x28))
-#define LVAE_ISO_SPEED  (*(uint8_t* )(LVAE_STRUCT))      // offset 0x0; at 3 it changes iso very slowly
+    // manual exposure overrides
+    #define LVAE_STRUCT 0x78474
+    #define CONTROL_BV      (*(uint16_t*)(LVAE_STRUCT+0x20)) // EP_SetControlBv
+    #define CONTROL_BV_TV   (*(uint16_t*)(LVAE_STRUCT+0x22)) // EP_SetControlParam
+    #define CONTROL_BV_AV   (*(uint16_t*)(LVAE_STRUCT+0x24))
+    #define CONTROL_BV_ISO  (*(uint16_t*)(LVAE_STRUCT+0x26))
+    #define CONTROL_BV_ZERO (*(uint16_t*)(LVAE_STRUCT+0x28))
+    #define LVAE_ISO_SPEED  (*(uint8_t* )(LVAE_STRUCT))      // offset 0x0; at 3 it changes iso very slowly
     //~ #define LVAE_ISO_MIN    (*(uint8_t* )(LVAE_STRUCT+0x28)) // string: ISOMin:%d
     //~ #define LVAE_ISO_HIS    (*(uint8_t* )(LVAE_STRUCT+0x2a)) // no idea what this is
-#define LVAE_DISP_GAIN  (*(uint16_t*)(LVAE_STRUCT+0x3c)) // lvae_setdispgain
-#define LVAE_MOV_M_CTRL (*(uint8_t* )(LVAE_STRUCT+0x1c)) // lvae_setmoviemanualcontrol
+    #define LVAE_DISP_GAIN  (*(uint16_t*)(LVAE_STRUCT+0x3c)) // lvae_setdispgain
+    #define LVAE_MOV_M_CTRL (*(uint8_t* )(LVAE_STRUCT+0x1c)) // lvae_setmoviemanualcontrol
 
     #define MIN_MSLEEP 10
 
     #define INFO_BTN_NAME "INFO"
     #define Q_BTN_NAME "[Q]"
 
-#define ARROW_MODE_TOGGLE_KEY "LCD SENSOR"
+    #define ARROW_MODE_TOGGLE_KEY "LCD SENSOR"
 
-#define DISPLAY_STATEOBJ (*(struct state_object **)(0x23C20+0x10C))
-#define DISPLAY_IS_ON (DISPLAY_STATEOBJ->current_state != 0)
+    #define DISPLAY_STATEOBJ (*(struct state_object **)(0x23C20+0x10C))
+    #define DISPLAY_IS_ON (DISPLAY_STATEOBJ->current_state != 0)
 
-#define VIDEO_PARAMETERS_SRC_3 MEM(0x25AF0)
-#define FRAME_ISO (*(uint8_t*)(VIDEO_PARAMETERS_SRC_3+0))
-#define FRAME_APERTURE (*(uint8_t*)(VIDEO_PARAMETERS_SRC_3+1))
-#define FRAME_SHUTTER (*(uint8_t*)(VIDEO_PARAMETERS_SRC_3+2))
-#define FRAME_SHUTTER_TIMER (*(uint16_t*)(VIDEO_PARAMETERS_SRC_3+6))
-#define FRAME_BV ((int)FRAME_SHUTTER + (int)FRAME_APERTURE - (int)FRAME_ISO)
+    #define VIDEO_PARAMETERS_SRC_3 MEM(0x25AF0)
+    #define FRAME_ISO (*(uint8_t*)(VIDEO_PARAMETERS_SRC_3+0))
+    #define FRAME_APERTURE (*(uint8_t*)(VIDEO_PARAMETERS_SRC_3+1))
+    #define FRAME_SHUTTER (*(uint8_t*)(VIDEO_PARAMETERS_SRC_3+2))
+    #define FRAME_SHUTTER_TIMER (*(uint16_t*)(VIDEO_PARAMETERS_SRC_3+6))
+    #define FRAME_BV ((int)FRAME_SHUTTER + (int)FRAME_APERTURE - (int)FRAME_ISO)
 
     // see "Malloc Information"
-#define MALLOC_STRUCT 0x4b908
-#define MALLOC_FREE_MEMORY (MEM(MALLOC_STRUCT + 8) - MEM(MALLOC_STRUCT + 0x1C)) // "Total Size" - "Allocated Size"
+    #define MALLOC_STRUCT 0x4b908
+    #define MALLOC_FREE_MEMORY (MEM(MALLOC_STRUCT + 8) - MEM(MALLOC_STRUCT + 0x1C)) // "Total Size" - "Allocated Size"
 
-//TODO: Check if this hack works again or not :(
-#define UNAVI_BASE (0x41948)
-#define UNAVI (MEM(UNAVI_BASE + 0x24)) // dec CancelUnaviFeedBackTimer, then look around that memory area for a location that changes when you keep HS pressed
-#define UNAVI_AV (MEM(UNAVI_BASE + 0x58)) //Same as above, but this location is linked to the exp comp button
-#define UNAVI_FEEDBACK_TIMER_ACTIVE ((UNAVI == 2) || (UNAVI_AV != 0))
+    //TODO: Check if this hack works again or not :(
+    #define UNAVI_BASE (0x41948)
+    #define UNAVI (MEM(UNAVI_BASE + 0x24)) // dec CancelUnaviFeedBackTimer, then look around that memory area for a location that changes when you keep HS pressed
+    #define UNAVI_AV (MEM(UNAVI_BASE + 0x58)) //Same as above, but this location is linked to the exp comp button
+    #define UNAVI_FEEDBACK_TIMER_ACTIVE ((UNAVI == 2) || (UNAVI_AV != 0))
 
-#define DISPLAY_ORIENTATION MEM(0x23C20+0xB8) // read-only; string: UpdateReverseTFT.
+    #define DISPLAY_ORIENTATION MEM(0x23C20+0xB8) // read-only; string: UpdateReverseTFT.
 
     /******************************************************************************************************************
      * touch_num_fingers_ptr:
