@@ -1,8 +1,4 @@
-
 #Makefile for 70D
-
-# compile position independent (experimental)
-CONFIG_PIC=n
 
 ML_SRC_EXTRA_OBJS = \
 	misc.o \
