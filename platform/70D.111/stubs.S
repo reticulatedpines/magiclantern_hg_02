@@ -195,7 +195,7 @@ NSTUB(0xFF1480A0,  FreeMemoryResource)                      // m_pfFreeMemoryCBR
 /** GUI timers **/
 NSTUB(0xFF54A2D0,  CancelDateTimer)
 NSTUB(    0xE8AC,  SetTimerAfter)
-NSTUB(    0xEAAC, TimerCancel)
+///NSTUB(    0xEAAC,  TimerCancel)
 
 /** H264 Encoder **/
 NSTUB(   0x946E0,  mvr_config)

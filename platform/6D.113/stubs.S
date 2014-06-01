@@ -91,7 +91,6 @@ NSTUB(0xFF11C5D0,  StartASIFDMAADC)                         // warning: looks di
 NSTUB(0xFF11C9A4,  StartASIFDMADAC)                         // warning: looks different
 NSTUB(0xFF11C87C,  StopASIFDMAADC)                          // warning: looks different
 NSTUB(0xFF11CC24,  StopASIFDMADAC)                          // warning: looks different
-// NSTUB(    ???,  SetASIFMode)                             /* present on 700D.113 */
 
 /** Audio **/
 NSTUB(   0x752E0,  sounddev)                                // Maybe 0x752e0 or 0x753f4

@@ -95,7 +95,6 @@ NSTUB(0xFF10A674,  StartASIFDMAADC)                         // To Regular
 NSTUB(0xFF10AA48,  StartASIFDMADAC)                         // Needs Patches Or
 NSTUB(0xFF10A920,  StopASIFDMAADC)                          // Regular
 NSTUB(0xFF10ACC8,  StopASIFDMADAC)                          // NormalStopAsif
-// NSTUB(    ???,  SetASIFMode)                             /* present on 700D.113 */
 // NSTUB(    ???,  SetAudioVolumeIn)                        /* present on 6D.113 */
 
 /** Audio **/
