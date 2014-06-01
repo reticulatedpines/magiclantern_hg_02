@@ -99,7 +99,8 @@
 //~ #define CONFIG_DMA_MEMCPY
 
 /** We know how to use edmac_memcpy. This one is really fast (600MB/s!) */
-#define CONFIG_EDMAC_MEMCPY
+//~ TODO: Re-enable after finding a free address
+//~ #define CONFIG_EDMAC_MEMCPY
 
 /** We know how to use engine resource locks */
 #define CONFIG_ENGINE_RESLOCK
