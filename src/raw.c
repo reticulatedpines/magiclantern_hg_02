@@ -571,10 +571,10 @@ static int raw_update_params_work()
         #endif
 
         #ifdef CONFIG_700D
-        skip_top    = 28;
-        skip_left   = 72;
+        skip_top    = 30;
+        skip_left   = 74;
         skip_right  = 0;
-        skip_bottom = zoom ? 0 : mv1080crop ? 0 : 4;
+        skip_bottom = zoom ? 0 : mv1080crop ? 0 : mv720 ? 6 : 4;
         #endif
 
         #ifdef CONFIG_7D
@@ -673,6 +673,11 @@ static int raw_update_params_work()
 
         #if defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_700D) || defined(CONFIG_100D)
         skip_left = 72;
+        skip_top = 52;
+        #endif
+
+        #ifdef CONFIG_700D
+        skip_left = 74;
         skip_top = 52;
         #endif
 
