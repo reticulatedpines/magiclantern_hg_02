@@ -671,7 +671,7 @@ static int raw_update_params_work()
         #endif 
 
 
-        #if defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_700D) || defined(CONFIG_100D)
+        #if defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_100D)
         skip_left = 72;
         skip_top = 52;
         #endif
