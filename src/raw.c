@@ -562,15 +562,7 @@ static int raw_update_params_work()
         skip_bottom = 0;
         #endif
 
-        #if defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_100D)
-        #warning FIXME: are these values correct for 720p and crop modes?
-        skip_top    = 28;
-        skip_left   = 74;
-        skip_right  = 0;
-        skip_bottom = 6;
-        #endif
-
-        #ifdef CONFIG_700D
+        #if defined(CONFIG_700D) || defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_100D)
         skip_top    = 30;
         skip_left   = 74;
         skip_right  = 0;
@@ -671,12 +663,7 @@ static int raw_update_params_work()
         #endif 
 
 
-        #if defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_100D)
-        skip_left = 72;
-        skip_top = 52;
-        #endif
-
-        #ifdef CONFIG_700D
+        #if defined(CONFIG_700D) || defined(CONFIG_650D) || defined(CONFIG_EOSM) || defined(CONFIG_100D)
         skip_left = 74;
         skip_top = 52;
         #endif
