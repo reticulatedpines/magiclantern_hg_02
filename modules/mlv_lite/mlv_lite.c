@@ -67,6 +67,7 @@
 #include "../mlv_rec/mlv.h"
 #include "../trace/trace.h"
 #include "powersave.h"
+#include "shoot.h"
 
 /* from mlv_play module */
 extern WEAK_FUNC(ret_0) void mlv_play_file(char *filename);
