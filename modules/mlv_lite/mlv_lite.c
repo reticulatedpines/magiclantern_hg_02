@@ -101,6 +101,11 @@ static int cam_5d3 = 0;
 static int cam_5d3_113 = 0;
 static int cam_5d3_123 = 0;
 
+/* store mlv_snd samplingRate in here */
+/* also use it for checking whether we are recording sound */
+static int samplingRate = 0;
+#define RECORDING_SOUND (samplingRate > 0)
+
 /**
  * resolution (in pixels) should be multiple of 16 horizontally (see http://www.magiclantern.fm/forum/index.php?topic=5839.0)
  * furthermore, resolution (in bytes) should be multiple of 8 in order to use the fastest EDMAC flags ( http://magiclantern.wikia.com/wiki/Register_Map#EDMAC ),
@@ -310,7 +315,8 @@ struct frame_slot
         SLOT_RESERVED,      /* it may become available when resizing the previous slots */
         SLOT_CAPTURING,     /* in progress */
         SLOT_FULL,          /* contains fully captured image data */
-        SLOT_WRITING        /* it's being saved to card */
+        SLOT_WRITING,       /* it's being saved to card */
+        SLOT_LOCKED         /* in use by mlv_snd */
     } status;
 };
 
@@ -330,7 +336,8 @@ static GUARDED_BY(LiveViewTask) int writing_queue[COUNT(slots)+1];  /* queue of 
 static GUARDED_BY(LiveViewTask) int writing_queue_tail = 0;         /* place captured frames here */
 static GUARDED_BY(RawRecTask)   int writing_queue_head = 0;         /* extract frames to be written from here */ 
 
-static GUARDED_BY(LiveViewTask) int frame_count = 0;                /* how many frames we have processed */
+static GUARDED_BY(LiveViewTask) int video_frame_count = 0;          /* current video frame */
+static GUARDED_BY(LiveViewTask) int total_frame_count = 0;          /* how many frames we have processed */
 static GUARDED_BY(LiveViewTask) int skipped_frames = 0;             /* how many frames we had to drop (only done during pre-recording) */
 static GUARDED_BY(RawRecTask)   int chunk_frame_count = 0;          /* how many frames in the current file chunk */
 static volatile                 int buffer_full = 0;                /* true when the memory becomes full */
@@ -353,6 +360,7 @@ static GUARDED_BY(RawRecTask)   mlv_expo_hdr_t expo_hdr;
 static GUARDED_BY(RawRecTask)   mlv_lens_hdr_t lens_hdr;
 static GUARDED_BY(RawRecTask)   mlv_rtci_hdr_t rtci_hdr;
 static GUARDED_BY(RawRecTask)   mlv_wbal_hdr_t wbal_hdr;
+static GUARDED_BY(RawRecTask)   mlv_wavi_hdr_t wavi_hdr;
 static GUARDED_BY(LiveViewTask) mlv_vidf_hdr_t vidf_hdr;
 static GUARDED_BY(RawRecTask)   uint64_t mlv_start_timestamp = 0;
        GUARDED_BY(RawRecTask)   uint32_t raw_rec_trace_ctx = TRACE_ERROR;
@@ -360,6 +368,9 @@ static GUARDED_BY(RawRecTask)   uint64_t mlv_start_timestamp = 0;
 /* interface to other modules: these are called when recording starts or stops  */
 extern WEAK_FUNC(ret_0) unsigned int raw_rec_cbr_starting();
 extern WEAK_FUNC(ret_0) unsigned int raw_rec_cbr_stopping();
+extern WEAK_FUNC(ret_0) uint32_t raw_rec_cbr_started();
+extern WEAK_FUNC(ret_0) uint32_t raw_rec_cbr_stopped();
+extern WEAK_FUNC(ret_0) uint32_t raw_rec_cbr_mlv_block(mlv_hdr_t *hdr);
 
 static int raw_rec_should_preview(void);
 
@@ -368,13 +379,13 @@ static inline int pre_recording_buffer_full()
     /* fixme: not very accurate with variable frame sizes */
     return 
         raw_recording_state == RAW_PRE_RECORDING &&
-        frame_count - pre_record_first_frame >= pre_record_num_frames;
+        video_frame_count - pre_record_first_frame >= pre_record_num_frames;
 }
 
 static inline int pre_recorded_frames()
 {
     return (raw_recording_state == RAW_PRE_RECORDING)
-        ? frame_count - pre_record_first_frame
+        ? video_frame_count - pre_record_first_frame
         : 0;
 }
 
@@ -1462,7 +1473,7 @@ static void show_buffer_status()
     else
     {
         int free = count_free_slots();
-        int x = frame_count % 720;
+        int x = video_frame_count % 720;
         int ymin = 120;
         int ymax = 400;
         int y = ymin + free * (ymax - ymin) / valid_slot_count;
@@ -1568,7 +1579,7 @@ static int update_status(char * buffer, int buffer_size)
     /* Calculate the stats */
     int fps = fps_get_current_x1000();  /* FPS x1000 */
     int p = pre_recorded_frames();      /* pre-recorded frames */
-    int r = (frame_count - 1 - p);      /* recorded frames */
+    int r = (video_frame_count - 1 - p);      /* recorded frames */
     int t = (r * 1000) / fps;           /* recorded time - truncated */
 
     /* estimate how many number of frames we can record from now on */
@@ -1642,7 +1653,7 @@ static int update_status(char * buffer, int buffer_size)
     else 
     {
         /* recording stopped - show number of frames */ 
-        len = snprintf(buffer, buffer_size, "%d frames", frame_count - 1);
+        len = snprintf(buffer, buffer_size, "%d frames", video_frame_count - 1);
         return COLOR_DARK_RED;
     }
 }
@@ -1786,7 +1797,9 @@ unsigned int raw_rec_polling_cbr(unsigned int unused)
     }
     prev_state = current_state;
 
-    if (!raw_video_active)
+    /* caveat: we may get out of LiveView before recording fully stops
+     * don't free the resources if the raw video task is still active */
+    if (!raw_video_active && RAW_IS_IDLE)
     {
         /* raw video turned off? free any resources we might have got */
         if (shoot_mem_suite || srm_mem_suite)
@@ -1866,7 +1879,7 @@ void FAST hack_liveview_vsync()
     
     if (!PREVIEW_HACKED) return;
     
-    if (RAW_IS_RECORDING && frame_count == 0)
+    if (RAW_IS_RECORDING && video_frame_count == 0)
     {
         for (int channel = 0; channel < 32; channel++)
         {
@@ -1951,6 +1964,139 @@ void hack_liveview(int unhack)
                 unpatch_memory(dialog_refresh_timer_addr);
             }
         }
+    }
+}
+
+void mlv_rec_queue_block(mlv_hdr_t *hdr)
+{
+    if(!memcmp(hdr->blockType, "WAVI", 4))
+    {
+        mlv_wavi_hdr_t *wavi_hdr = (mlv_wavi_hdr_t*)hdr;
+        samplingRate = wavi_hdr->samplingRate;
+        printf("Audio: samplingRate: %d\n", samplingRate);    
+    }
+}
+
+void mlv_rec_set_rel_timestamp(mlv_hdr_t *hdr, uint64_t timestamp)
+{
+    hdr->timestamp = timestamp - mlv_start_timestamp;
+}
+
+/* this can be called from anywhere to get a free memory slot. must be submitted using mlv_rec_release_slot() */
+int32_t mlv_rec_get_free_slot()
+{
+    uint32_t retries = 0;
+    int32_t allocated_slot = -1;
+
+retry_find:
+    allocated_slot = -1;
+
+    for (int i = 0; i < total_slot_count; i++)
+    {
+        if (slots[i].status == SLOT_FREE)
+        {
+            {
+                allocated_slot = i;
+                break;
+            }
+        }
+
+        /* already found one? */
+        if(allocated_slot >= 0)
+        {
+            break;
+        }
+    }
+
+    /* now try to mark this slot as being used */
+    if(allocated_slot >= 0)
+    {
+        uint32_t old_int = cli();
+        if(slots[allocated_slot].status == SLOT_FREE)
+        {
+            slots[allocated_slot].status = SLOT_LOCKED;
+        }
+        else
+        {
+            allocated_slot = -1;
+        }
+        sei(old_int);
+    }
+
+    /* ok now check if allocation was successful and retry */
+    if(allocated_slot < 0)
+    {
+        retries++;
+        if(retries < 5)
+        {
+            goto retry_find;
+        }
+        else
+        {
+            return -1;
+        }
+    }
+
+    return allocated_slot;
+}
+
+void mlv_rec_get_slot_info(int32_t slot, uint32_t *size, void **address)
+{
+    if(slot < 0 || slot >= total_slot_count)
+    {
+        *address = NULL;
+        *size = 0;
+        return;
+    }
+
+    /* as the caller will use the slot for anything, we have to save out VIDF frame header
+       (it contains padding and stuff that we dont want to recalculate)
+       we are using a NULL block with some data in it to store the VIDF.
+    */
+
+    mlv_vidf_hdr_t *vidf = slots[slot].ptr;
+
+    /* set old header to a skipped header format */
+    mlv_set_type((mlv_hdr_t *)vidf, "NULL");
+
+    /* backup old size into free space */
+    ((uint32_t*) vidf)[sizeof(mlv_vidf_hdr_t)/4] = vidf->blockSize;
+
+    /* then set the header to be totally skipped */
+    vidf->blockSize = 0x100;
+
+    /* ok now return the shrunk buffer address */
+    *address = (void*)((uint32_t)slots[slot].ptr + 0x100);
+    *size = slots[slot].size - vidf->blockSize;
+}
+
+/* mark a previously with mlv_rec_get_free_slot() allocated slot for being reused or written into the file */
+void mlv_rec_release_slot(int32_t slot, uint32_t write)
+{
+    if(slot < 0 || slot >= total_slot_count)
+    {
+        return;
+    }
+
+    if(write)
+    {
+        slots[slot].status = SLOT_FULL;
+        slots[slot].frame_number = total_frame_count;
+
+        /* these things are normally updated by LiveViewTask (vsync hook)
+         * that task runs with high priority, so we are not going to interrupt it,
+         * but it might interrupt us, at least in theory; clear interrupts for now
+         * (not exactly clean; there are a bunch of thread safety warnings, for good reason)
+         */
+        int old = cli();
+        total_frame_count++;
+        writing_queue[writing_queue_tail] = slot;
+        INC_MOD(writing_queue_tail, COUNT(writing_queue));
+        sei(old);
+    }
+    else
+    {
+        slots[slot].status = SLOT_FREE;
     }
 }
 
@@ -2161,7 +2307,7 @@ static REQUIRES(LiveViewTask)
 void FAST pre_record_discard_frame()
 {
     /* discard old frames */
-    /* also adjust frame_count so all frames start from 1,
+    /* also adjust video_frame_count so all frames start from 1,
      * just like the rest of the code assumes */
 
     for (int i = 0; i < total_slot_count; i++)
@@ -2175,7 +2321,8 @@ void FAST pre_record_discard_frame()
             if (slots[i].frame_number == pre_record_first_frame)
             {
                 free_slot(i);
-                frame_count--;
+                video_frame_count--;
+                total_frame_count--;
             }
             else if (slots[i].frame_number > pre_record_first_frame)
             {
@@ -2191,12 +2338,12 @@ static REQUIRES(LiveViewTask)
 void FAST pre_record_queue_frames()
 {
     /* queue all captured frames for writing */
-    /* (they are numbered from 1 to frame_count-1; frame 0 is skipped) */
+    /* (they are numbered from 1 to video_frame_count-1; frame 0 is skipped) */
     /* they are not ordered, which complicates things a bit */
-    printf("Pre-rec: queueing frames %d to %d.\n", pre_record_first_frame, frame_count-1);
+    printf("Pre-rec: queueing frames %d to %d.\n", pre_record_first_frame, video_frame_count-1);
 
     int i = 0;
-    for (int current_frame = pre_record_first_frame; current_frame < frame_count; current_frame++)
+    for (int current_frame = pre_record_first_frame; current_frame < video_frame_count; current_frame++)
     {
         /* consecutive frames tend to be grouped, 
          * so this loop will not run every time */
@@ -2233,7 +2380,7 @@ void FAST pre_record_vsync_step()
         if (!pre_record_triggered)
         {
             /* return to pre-recording state */
-            pre_record_first_frame = frame_count;
+            pre_record_first_frame = video_frame_count;
             raw_recording_state = RAW_PRE_RECORDING;
             printf("Pre-rec: back to pre-recording (frame %d).\n", pre_record_first_frame);
             /* fall through the next block */
@@ -2247,7 +2394,7 @@ void FAST pre_record_vsync_step()
         if (!pre_record_first_frame)
         {
             /* start pre-recording (first attempt) */
-            pre_record_first_frame = frame_count;
+            pre_record_first_frame = video_frame_count;
             printf("Pre-rec: starting from frame %d.\n", pre_record_first_frame);
         }
 
@@ -2268,7 +2415,7 @@ void FAST pre_record_vsync_step()
                 /* do not resume recording; just start a new pre-recording "session" */
                 /* trick to allow reusing all frames for pre-recording */
                 pre_record_triggered = 0;
-                pre_record_first_frame = frame_count;
+                pre_record_first_frame = video_frame_count;
             }
         }
         else if (pre_recording_buffer_full())
@@ -2307,22 +2454,26 @@ static REQUIRES(RawRecTask)
 int frame_check_saved(int slot_index)
 {
     ASSERT(slots[slot_index].ptr);
-    void* ptr = slots[slot_index].ptr + VIDF_HDR_SIZE;
-    uint32_t edmac_size = (slots[slot_index].payload_size + 3) & ~3;
-    uint32_t* frame_end = ptr + edmac_size - 4;
-    uint32_t* after_frame = ptr + edmac_size;
-    if (*(volatile uint32_t*) after_frame != FRAME_SENTINEL)
+    /* Only do frame validation on video frames. */
+    if (!memcmp(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockType, "VIDF", 4))
     {
-        /* EDMAC overflow */
-        return -1;
+
+        void* ptr = slots[slot_index].ptr + VIDF_HDR_SIZE;
+        uint32_t edmac_size = (slots[slot_index].payload_size + 3) & ~3;
+        uint32_t* frame_end = ptr + edmac_size - 4;
+        uint32_t* after_frame = ptr + edmac_size;
+        if (*(volatile uint32_t*) after_frame != FRAME_SENTINEL)
+        {
+            /* EDMAC overflow */
+            return -1;
+        }
+
+        if (*(volatile uint32_t*) frame_end == FRAME_SENTINEL)
+        {
+            /* frame not yet complete */
+            return 0;
+        }
     }
-    
-    if (*(volatile uint32_t*) frame_end == FRAME_SENTINEL)
-    {
-        /* frame not yet complete */
-        return 0;
-    }
-    
     /* looks alright */
     return 1;
 }
@@ -2491,7 +2642,7 @@ static void compress_task()
              * unlikely to cause actual trouble - silence them for now */
             if (compressed_size < 0 && !RAW_IS_IDLE)
             {
-                printf("Compression error %d at frame %d\n", compressed_size, frame_count-1);
+                printf("Compression error %d at frame %d\n", compressed_size, video_frame_count-1);
                 ASSERT(0);
             }
 
@@ -2550,9 +2701,10 @@ static REQUIRES(LiveViewTask) FAST
 void process_frame(int next_fullsize_buffer_pos)
 {
     /* skip the first frame(s) */
-    if (frame_count <= 0)
+    if (video_frame_count <= 0)
     {
-        frame_count++;
+        video_frame_count++;
+        total_frame_count++;
         return;
     }
     
@@ -2585,7 +2737,7 @@ void process_frame(int next_fullsize_buffer_pos)
     if (capture_slot >= 0)
     {
         /* okay */
-        slots[capture_slot].frame_number = frame_count;
+        slots[capture_slot].frame_number = total_frame_count;
         slots[capture_slot].status = SLOT_CAPTURING;
         frame_add_checks(capture_slot);
 
@@ -2618,7 +2770,7 @@ void process_frame(int next_fullsize_buffer_pos)
     vidf_hdr.panPosY = skip_y;
     *(mlv_vidf_hdr_t*)(slots[capture_slot].ptr) = vidf_hdr;
 
-    //~ printf("saving frame %d: slot %d ptr %x\n", frame_count, capture_slot, ptr);
+    //~ printf("saving frame %d: slot %d ptr %x\n", video_frame_count, capture_slot, ptr);
 
     /* copy current frame to our buffer and crop it to its final size */
     /* for some reason, compression cannot be started from vsync */
@@ -2627,8 +2779,9 @@ void process_frame(int next_fullsize_buffer_pos)
     msg_queue_post(compress_mq, capture_slot | (next_fullsize_buffer_pos << 16));
 
     /* advance to next frame */
-    frame_count++;
-
+    video_frame_count++;
+    total_frame_count++;
+    
     return;
 }
 
@@ -2670,7 +2823,7 @@ unsigned int FAST raw_rec_vsync_setparam_cbr(unsigned int unused)
         /* H.264 might contain a few more frames; important? */
         /* note: the new setting applies to next LiveView frame
          * so the first RAW frame would also end up black;
-         * to skip it, we initialize frame_count with -1 */
+         * to skip it, we initialize video_frame_count with -1 */
         set_frame_shutter_timer(0);
         return CBR_RET_STOP;
     }
@@ -2766,6 +2919,7 @@ void init_mlv_chunk_headers(struct raw_info * raw_info)
     file_hdr.audioFrameCount = 0;
     file_hdr.sourceFpsNom = fps_get_current_x1000();
     file_hdr.sourceFpsDenom = 1000;
+    raw_rec_cbr_mlv_block((mlv_hdr_t*)&file_hdr);
     
     memset(&rawi_hdr, 0, sizeof(mlv_rawi_hdr_t));
     mlv_set_type((mlv_hdr_t *)&rawi_hdr, "RAWI");
@@ -2814,6 +2968,23 @@ void init_mlv_chunk_headers(struct raw_info * raw_info)
     mlv_set_type((mlv_hdr_t*)&vidf_hdr, "VIDF");
     vidf_hdr.blockSize  = max_frame_size;
     vidf_hdr.frameSpace = VIDF_HDR_SIZE - sizeof(mlv_vidf_hdr_t);
+
+    if (RECORDING_SOUND)
+    {
+        memset(&wavi_hdr, 0, sizeof(mlv_wavi_hdr_t));
+
+        mlv_set_type((mlv_hdr_t*)&wavi_hdr, "WAVI");
+        wavi_hdr.blockSize = sizeof(mlv_wavi_hdr_t);
+        mlv_set_timestamp((mlv_hdr_t*)&wavi_hdr, mlv_start_timestamp);
+
+        /* this part is compatible to RIFF WAVE/fmt header */
+        wavi_hdr.format = 1;
+        wavi_hdr.channels = 2;
+        wavi_hdr.samplingRate = samplingRate;
+        wavi_hdr.bytesPerSecond = samplingRate * (16 / 8) * 2;
+        wavi_hdr.blockAlign = (16 / 8) * 2;
+        wavi_hdr.bitsPerSample = 16;
+    }
 }
 
 static REQUIRES(RawRecTask)
@@ -2827,6 +2998,13 @@ int write_mlv_chunk_headers(FILE* f)
     if (FIO_WriteFile(f, &lens_hdr, lens_hdr.blockSize) != (int)lens_hdr.blockSize) return 0;
     if (FIO_WriteFile(f, &rtci_hdr, rtci_hdr.blockSize) != (int)rtci_hdr.blockSize) return 0;
     if (FIO_WriteFile(f, &wbal_hdr, wbal_hdr.blockSize) != (int)wbal_hdr.blockSize) return 0;
+
+    if (RECORDING_SOUND)
+    {
+        /* WAVI written only if we record sound */
+        if (FIO_WriteFile(f, &wavi_hdr, wavi_hdr.blockSize) != (int)wavi_hdr.blockSize) return 0;
+    }
+
     if (mlv_write_vers_blocks(f, mlv_start_timestamp)) return 0;
     
     int hdr_size = FIO_SeekSkipFile(f, 0, SEEK_CUR);
@@ -2849,6 +3027,10 @@ static REQUIRES(RawRecTask)
 void finish_chunk(FILE* f)
 {
     file_hdr.videoFrameCount = chunk_frame_count;
+
+    /* get Audio frameCount from mlv_snd.c */
+    raw_rec_cbr_mlv_block((mlv_hdr_t*)&file_hdr);
+
     FIO_SeekSkipFile(f, 0, SEEK_SET);
     FIO_WriteFile(f, &file_hdr, file_hdr.blockSize);
     FIO_CloseFile(f);
@@ -2968,7 +3150,8 @@ extern thunk ErrCardForLVApp_handler;
 static REQUIRES(LiveViewTask)
 void init_vsync_vars()
 {
-    frame_count = use_h264_proxy() ? -1 : 0;    /* see setparam_cbr */
+    video_frame_count = use_h264_proxy() ? -1 : 0;    /* see setparam_cbr */
+    total_frame_count = video_frame_count;
     capture_slot = -1;
     fullsize_buffer_pos = 0;
     edmac_active = 0;
@@ -3062,6 +3245,13 @@ void raw_video_rec_task()
         goto cleanup;
     }
 
+    /* signal that we are starting */
+    raw_rec_cbr_starting();
+
+    /* Need to start the recording of audio before the init of the mlv chunk 
+     * or the wavi header isn't initialized before the writing starts. */
+    raw_rec_cbr_started();
+
     init_mlv_chunk_headers(&raw_info);
     written_total = written_chunk = write_mlv_chunk_headers(f);
     if (!written_chunk)
@@ -3078,9 +3268,6 @@ void raw_video_rec_task()
 
     /* try a sync beep (not very precise, but better than nothing) */
     beep();
-
-    /* signal that we are starting */
-    raw_rec_cbr_starting();
 
     /* signal start of recording to the compression task */
     msg_queue_post(compress_mq, INT_MAX);
@@ -3158,12 +3345,14 @@ void raw_video_rec_task()
                 ASSERT(i != w_head);
                 break;
             }
+            
+            if (!memcmp(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockType, "VIDF", 4)) {
+                /* consistency checks */
+                ASSERT(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockSize == (uint32_t) slots[slot_index].size);
+//                ASSERT(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->frameNumber == (uint32_t) slots[slot_index].frame_number - 1);
+            }
 
-            /* consistency checks */
-            ASSERT(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockSize == (uint32_t) slots[slot_index].size);
-            ASSERT(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->frameNumber == (uint32_t) slots[slot_index].frame_number - 1);
-
-            if (OUTPUT_COMPRESSION)
+            if (OUTPUT_COMPRESSION && !memcmp(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockType, "VIDF", 4))
             {
                 ASSERT(slots[slot_index].size < max_frame_size);
             }
@@ -3218,7 +3407,7 @@ void raw_video_rec_task()
         {
             int slot_index = writing_queue[i];
 
-            if (OUTPUT_COMPRESSION)
+            if (OUTPUT_COMPRESSION && !memcmp(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockType, "VIDF", 4))
             {
                 ASSERT(slots[slot_index].size < max_frame_size);
             }
@@ -3381,7 +3570,7 @@ abort_and_check_early_stop:
         last_processed_frame++;
 
         slots[slot_index].status = SLOT_WRITING;
-        if (OUTPUT_COMPRESSION)
+        if (OUTPUT_COMPRESSION && !memcmp(((mlv_vidf_hdr_t*)slots[slot_index].ptr)->blockType, "VIDF", 4))
         {
             ASSERT(slots[slot_index].size < max_frame_size);
         }
@@ -3405,6 +3594,8 @@ abort_and_check_early_stop:
     }
 
 cleanup:
+    raw_rec_cbr_stopped();
+
     if (f) finish_chunk(f);
     if (!written_total)
     {

@@ -39,7 +39,7 @@
 
 static uint32_t trace_ctx = TRACE_ERROR;
 
-static CONFIG_INT("mlv.snd.enabled", mlv_snd_enabled, 0);
+static CONFIG_INT("mlv.snd.enabled", mlv_snd_enabled, 1);
 static CONFIG_INT("mlv.snd.mlv_snd_enable_tracing", mlv_snd_enable_tracing, 0);
 static CONFIG_INT("mlv.snd.bit.depth", mlv_snd_in_bits_per_sample, 16);
 static CONFIG_INT("mlv.snd.sample.rate", mlv_snd_in_sample_rate, 48000);
@@ -308,7 +308,7 @@ static void mlv_snd_queue_slot()
         entry->mlv_slot_end = 0;
         
         /* check if this was the last frame and set end flag if so */
-        if((used + block_size + sizeof(mlv_hdr_t) >= size) || (queued >= 128))
+        if((used + block_size + sizeof(mlv_hdr_t) >= size) || (queued >= 127))
         {
             /* this tells the writer task that the buffer is filled with that entry being done and can be committed */
             entry->mlv_slot_end = 1;
