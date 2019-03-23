@@ -1180,7 +1180,7 @@ static MENU_UPDATE_FUNC(reg_update)
     }
     else if (regs[reg].dst & 0xFFF0)
     {
-        entry->max = 0x40000000; /* fixme: menu backend freezes at higher values */
+        entry->max = 0xFFFFFFFF;
         reg_full |= (uint32_t) regs[reg].dst << 16;
     }
     else
