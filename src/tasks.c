@@ -369,6 +369,16 @@ MENU_UPDATE_FUNC(tasks_print)
 #include "gps.h"
 #endif
 
+static void leds_on()
+{
+    _card_led_on();
+    info_led_on();
+    delayed_call(20, leds_on, 0);
+}
+
+/* to refactor with CBR */
+extern int module_shutdown();
+
 static void ml_shutdown()
 {
     check_pre_shutdown_flag();
@@ -377,26 +387,44 @@ static void ml_shutdown()
 #endif
     ml_shutdown_requested = 1;
     
-    info_led_on();
-    _card_led_on();
     restore_af_button_assignment_at_shutdown();
 #ifdef FEATURE_GPS_TWEAKS
     gps_tweaks_shutdown_hook();
 #endif    
     config_save_at_shutdown();
 #if defined(CONFIG_MODULES)
-    /* to refactor with CBR */
-    extern int module_shutdown();
     module_shutdown();
 #endif
-    info_led_on();
-    _card_led_on();
 }
 
 PROP_HANDLER(PROP_TERMINATE_SHUT_REQ)
 {
-    //bmp_printf(FONT_MED, 0, 0, "SHUT REQ %d ", buf[0]);
-    if (buf[0] == 0)  ml_shutdown();
+    /* 0=request, 3=execute, 4=cancel */
+    /* 3 appears too late for saving config files */
+    if (buf[0] == 0)
+    {
+        /* keep the LEDs on until shutdown completes */
+        delayed_call(20, leds_on, 0);
+
+        ml_shutdown();
+    }
+}
+
+PROP_HANDLER(PROP_ABORT)
+{
+    /* emergency stop - do not save properties */
+    /* -1 = init, 1 = trigger */
+
+    if (buf[0] == 1)
+    {
+        /* keep the LEDs on until shutdown completes */
+        delayed_call(20, leds_on, 0);
+
+        #if defined(CONFIG_MODULES)
+        /* if no hard crash, load the modules after taking the battery out */
+        module_shutdown();
+        #endif
+    }
 }
 
 #if 0
