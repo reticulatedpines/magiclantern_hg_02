@@ -563,7 +563,7 @@ static void snr_graph_2_shots(int noise_curve)
         for  (int buffer_size_index = 0; buffer_size_index < COUNT(buffer_sizes) && !second_buf; buffer_size_index++)
         {
             raw_buffer_size = MIN(raw_info.frame_size, buffer_sizes[buffer_size_index] * 1024 * 1024);
-            second_buf = malloc(raw_buffer_size);
+            second_buf = tmp_malloc(raw_buffer_size);   /* use shoot_malloc instead of srm_malloc */
         }
 
         if (second_buf)
